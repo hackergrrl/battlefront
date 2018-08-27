@@ -1,6 +1,6 @@
-;; (ql:quickload "sdl2")
-;; (ql:quickload "cl-opengl")
-;; (ql:quickload "png")
+;;;; battlefront.lisp
+
+(in-package #:battlefront)
 
 (require :sdl2)
 (require :cl-opengl)
@@ -38,7 +38,7 @@
   (gl:matrix-mode :modelview)
   (gl:load-identity)
   (gl:clear-color 0.0 0.0 0.0 1.0)
-  (make-texture-from-png "/tmp/in.png"))
+  (make-texture-from-png "sprite.png"))
 
 (defun render ()
   ;; clear screen
