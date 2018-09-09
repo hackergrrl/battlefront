@@ -49,23 +49,18 @@
   ;; rotation
   (incf *rot* 1.0)
   (gl:load-identity)
-  (draw-sprite
-   :texture *sprite-tex*
-   :rgba (list
-          0.5
-          (cos (* 0.2 *rot*))
-          0.5
-          1.0)
-   :x 320
-   :y 240
-   :width 128
-   :height 128
-   :rot *rot*
-   :center-x 0.5
-   :center-y 0.5
-   :scale-x (+ 1.2 (* 0.2 (sin (* 0.13 *rot*))))
-   :scale-y (+ 1.2 (* 0.2 (sin (* 0.13 *rot*))))
-   )
+  (draw-sprite :texture *sprite-tex*
+               :rgba (list
+                      0.5
+                      (cos (* 0.2 *rot*))
+                      0.5
+                      1.0)
+               :x 320 :y 240
+               :width 128 :height 128
+               :rot *rot*
+               :center-x 0.5 :center-y 0.5
+               :scale-x (+ 1.2 (* 0.2 (sin (* 0.13 *rot*))))
+               :scale-y (+ 1.2 (* 0.2 (sin (* 0.13 *rot*)))))
   (gl:flush))
 
 (defun main-loop (win)
