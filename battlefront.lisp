@@ -51,9 +51,9 @@
   (draw-sprite
    :texture *sprite-tex*
    :rgba (list
-          0.15
-          0.15
-          (cos (* 0.06 *rot*))
+          0.5
+          (cos (* 0.2 *rot*))
+          0.5
           1.0)
    :x 320
    :y 240
@@ -61,7 +61,10 @@
    :height 128
    :rot *rot*
    :center-x 0.5
-   :center-y 0.5)
+   :center-y 0.5
+   :scale-x (+ 1.2 (* 0.2 (sin (* 0.13 *rot*))))
+   :scale-y (+ 1.2 (* 0.2 (sin (* 0.13 *rot*))))
+   )
   (gl:flush))
 
 (defun main-loop (win)
@@ -82,12 +85,15 @@
                       (x 0.0) (y 0.0)
                       (center-x 0.5) (center-y 0.5)
                       (rot 0.0)
-                      (rgba '(1.0 1.0 1.0 1.0)))
+                      (rgba '(1.0 1.0 1.0 1.0))
+                      (scale-x 1.0) (scale-y 1.0))
   "Draw a 2D sprite to the screen."
-  (let* ((bx (- (* width center-x) width))
-         (fx (+ width bx))
-         (by (- (* height center-y) height))
-         (fy (+ height by)))
+  (let* ((w (* width scale-x))
+         (h (* height scale-y))
+         (bx (- (* w center-x) w))
+         (fx (+ w bx))
+         (by (- (* h center-y) h))
+         (fy (+ h by)))
     (gl:bind-texture :texture-2d texture)
     (gl:push-matrix)
     (gl:translate x y 0)
