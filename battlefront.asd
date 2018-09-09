@@ -9,5 +9,4 @@
   :depends-on (#:sdl2
                #:cl-opengl
                #:png)
-  :components ((:file "package")
-               (:file "battlefront")))
+  :components ((:file "package")))
