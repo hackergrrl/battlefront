@@ -15,7 +15,8 @@
                sdl2-ffi:+sdl-major-version+
                sdl2-ffi:+sdl-minor-version+
                sdl2-ffi:+sdl-patchlevel+)
-    (sdl2:with-window (win :w 640 :h 480 :flags '(:shown :opengl))
+    (sdl2:with-window (win :title "Battlefront :: Alpha"
+                           :w 640 :h 480 :flags '(:shown :opengl))
       (sdl2:with-gl-context (gl-context win)
         ;; Basic window/gl setup
         (setup-gl win gl-context)
