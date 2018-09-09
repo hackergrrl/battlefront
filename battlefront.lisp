@@ -64,6 +64,9 @@
 (defun main-loop (win)
   "Run the game loop that handles input, rendering, etc"
   (sdl2:with-event-loop (:method :poll)
+    (:keydown (:keysym keysym)
+              (when (sdl2:scancode= (sdl2:scancode-value keysym) :scancode-escape)
+                (sdl2:push-event :quit)))
     (:idle ()
            (render)
            (sdl2:gl-swap-window win))
