@@ -7,6 +7,7 @@
 
 (defparameter *rot* 0)
 (defparameter *sprite-tex* nil)
+(defparameter *tileset-tex* nil)
 
 (defun main ()
   "The entry point of our game."
@@ -40,15 +41,16 @@
   (gl:matrix-mode :modelview)
   (gl:load-identity)
   (gl:clear-color 0.0 0.0 0.0 1.0)
-  (setq *sprite-tex*
-        (tex-png:make-texture-from-png "sprite.png")))
+  (setq *sprite-tex* (tex-png:make-texture-from-png "sprite.png"))
+  (setq *tileset-tex* (tex-png:make-texture-from-png "tileset.png")))
 
 (defun render ()
   ;; clear screen
   (gl:clear :color-buffer)
   ;; rotation
-  (incf *rot* 1.0)
+  (incf *rot* 0.2)
   (gl:load-identity)
+  (draw-tilemap *tileset-tex* 32 32)
   (draw-sprite :texture *sprite-tex*
                :rgba (list
                       0.5
@@ -104,5 +106,30 @@
     (gl:vertex fx fy)
     (gl:tex-coord 1 0)
     (gl:vertex fx by)
+    (gl:end)
+    (gl:pop-matrix)))
+
+(defun draw-tilemap (texture x y)
+  (let* ((tw (/ 32.0 512.0))
+         (th (/ 32.0 32.0))
+         (tx (* 3 tw))
+         (ty 0))
+    (gl:bind-texture :texture-2d texture)
+    (gl:push-matrix)
+    (gl:color 1.0 1.0 1.0 1.0)
+    (gl:translate (- x) (- y) 0)
+    (gl:begin :quads)
+    (dotimes (x 20)
+      (dotimes (y 15)
+        (let ((px (* x 32))
+              (py (* y 32)))
+          (gl:tex-coord tx ty)
+          (gl:vertex px py)
+          (gl:tex-coord tx (+ th ty))
+          (gl:vertex px (+ 32 py))
+          (gl:tex-coord (+ tw tx) (+ th ty))
+          (gl:vertex (+ 32 px) (+ 32 py))
+          (gl:tex-coord (+ tw tx) ty)
+          (gl:vertex (+ 32 px) py))))
     (gl:end)
     (gl:pop-matrix)))
