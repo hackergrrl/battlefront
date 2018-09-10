@@ -50,7 +50,7 @@
   ;; rotation
   (incf *rot* 0.2)
   (gl:load-identity)
-  (draw-tilemap *tileset-tex* 32 32)
+  (draw-tilemap *tileset-tex* *rot* *rot*)
   (draw-sprite :texture *sprite-tex*
                :rgba (list
                       0.5
@@ -113,16 +113,17 @@
   (let* ((tw (/ 32.0 512.0))
          (th (/ 32.0 32.0))
          (tx (* 3 tw))
-         (ty 0))
+         (ty 0)
+         (pox (mod x 32))
+         (poy (mod y 32)))
     (gl:bind-texture :texture-2d texture)
     (gl:push-matrix)
     (gl:color 1.0 1.0 1.0 1.0)
-    (gl:translate (- x) (- y) 0)
     (gl:begin :quads)
-    (dotimes (x 20)
-      (dotimes (y 15)
-        (let ((px (* x 32))
-              (py (* y 32)))
+    (dotimes (x 21)
+      (dotimes (y 16)
+        (let ((px (- (* x 32) pox))
+              (py (- (* y 32) poy)))
           (gl:tex-coord tx ty)
           (gl:vertex px py)
           (gl:tex-coord tx (+ th ty))
