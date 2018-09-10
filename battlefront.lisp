@@ -8,6 +8,7 @@
 (defparameter *rot* 0)
 (defparameter *sprite-tex* nil)
 (defparameter *tileset-tex* nil)
+(defparameter *tilemap* (make-array (list 10 10)))
 
 (defun main ()
   "The entry point of our game."
@@ -50,7 +51,7 @@
   ;; rotation
   (incf *rot* 0.2)
   (gl:load-identity)
-  (draw-tilemap *tileset-tex* *rot* *rot*)
+  (draw-tilemap *tileset-tex* *tilemap* *rot* *rot*)
   (draw-sprite :texture *sprite-tex*
                :rgba (list
                       0.5
@@ -109,11 +110,9 @@
     (gl:end)
     (gl:pop-matrix)))
 
-(defun draw-tilemap (texture x y)
+(defun draw-tilemap (texture tilemap x y)
   (let* ((tw (/ 32.0 512.0))
          (th (/ 32.0 32.0))
-         (tx (* 3 tw))
-         (ty 0)
          (pox (mod x 32))
          (poy (mod y 32)))
     (gl:bind-texture :texture-2d texture)
@@ -122,15 +121,29 @@
     (gl:begin :quads)
     (dotimes (x 21)
       (dotimes (y 16)
-        (let ((px (- (* x 32) pox))
-              (py (- (* y 32) poy)))
-          (gl:tex-coord tx ty)
+        (let* ((tile-x (floor (/ x 32)))
+               (tile-y (floor (/ y 32)))
+               (tile-id (aref-2d tilemap tile-x tile-y))
+               (u (* tile-id tw))
+               (v 0)
+               (px (- (* x 32) pox))
+               (py (- (* y 32) poy)))
+          (gl:tex-coord u v)
           (gl:vertex px py)
-          (gl:tex-coord tx (+ th ty))
+          (gl:tex-coord u (+ th v))
           (gl:vertex px (+ 32 py))
-          (gl:tex-coord (+ tw tx) (+ th ty))
+          (gl:tex-coord (+ tw u) (+ th v))
           (gl:vertex (+ 32 px) (+ 32 py))
-          (gl:tex-coord (+ tw tx) ty)
+          (gl:tex-coord (+ tw u) v)
           (gl:vertex (+ 32 px) py))))
     (gl:end)
     (gl:pop-matrix)))
+
+(defun aref-2d (array x y)
+  "Like aref, but for 2D arrays, and returns NIL if AT is out of bounds."
+  (if (or (< x 0)
+          (< y 0)
+          (>= x (array-dimension array 0))
+          (>= y (array-dimension array 1)))
+      nil
+      (aref array x y)))
