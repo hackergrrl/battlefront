@@ -8,7 +8,9 @@
 (defparameter *rot* 0)
 (defparameter *sprite-tex* nil)
 (defparameter *tileset-tex* nil)
-(defparameter *tilemap* (make-array (list 10 10)))
+(defparameter *tilemap* (make-array (list 20 20)))
+;; fun init:
+;; (dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
 
 (defun main ()
   "The entry point of our game."
@@ -121,9 +123,7 @@
     (gl:begin :quads)
     (dotimes (x 21)
       (dotimes (y 16)
-        (let* ((tile-x (floor (/ x 32)))
-               (tile-y (floor (/ y 32)))
-               (tile-id (aref-2d tilemap tile-x tile-y))
+        (let* ((tile-id (aref-2d tilemap x y 9))
                (u (* tile-id tw))
                (v 0)
                (px (- (* x 32) pox))
@@ -139,11 +139,11 @@
     (gl:end)
     (gl:pop-matrix)))
 
-(defun aref-2d (array x y)
-  "Like aref, but for 2D arrays, and returns NIL if AT is out of bounds."
+(defun aref-2d (array x y default)
+  "Like aref, but for 2D arrays, and returns DEFAULT if AT is out of bounds."
   (if (or (< x 0)
           (< y 0)
           (>= x (array-dimension array 0))
           (>= y (array-dimension array 1)))
-      nil
+      default
       (aref array x y)))
