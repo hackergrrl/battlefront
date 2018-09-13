@@ -8,7 +8,7 @@
   :serial t
   :depends-on (#:sdl2
                #:cl-opengl
-               #:png)
+               #:pngload)
   :components ((:file "package")
                (:file "tex-png")
                (:file "battlefront")))
