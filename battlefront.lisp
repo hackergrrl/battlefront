@@ -38,6 +38,8 @@
   (debug-log "Setting up window/gl.~%")
   (sdl2:gl-make-current win gl-context)
   (gl:enable :texture-2d)
+  (gl:enable :blend)
+  (gl:blend-func :src-alpha :one-minus-src-alpha)
   (gl:viewport 0 0 640 480)
   (gl:matrix-mode :projection)
   (gl:ortho 0 640 480 0 -2 2)
