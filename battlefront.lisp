@@ -5,12 +5,21 @@
 (require :sdl2)
 (require :cl-opengl)
 
+(defparameter *key-state* (make-hash-table))
+
 (defparameter *rot* 0)
+(defparameter *camera-x* 0)
+(defparameter *camera-y* 0)
 (defparameter *sprite-tex* nil)
 (defparameter *tileset-tex* nil)
 (defparameter *tilemap* (make-array (list 20 20)))
 ;; fun init:
-;; (dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
+;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
+
+(defun key-down (key)
+  (let ((scancode (intern (concatenate
+                           'string "SCANCODE-" (string-upcase key)) "KEYWORD")))
+    (gethash (sdl2:scancode-key-to-value scancode) *key-state*)))
 
 (defun main ()
   "The entry point of our game."
@@ -22,10 +31,7 @@
     (sdl2:with-window (win :title "Battlefront :: Alpha"
                            :w 640 :h 480 :flags '(:shown :opengl))
       (sdl2:with-gl-context (gl-context win)
-        ;; Basic window/gl setup
         (setup-gl win gl-context)
-
-        ;; Run main loop
         (main-loop win)))))
 
 (defun debug-log (msg &rest args)
@@ -49,13 +55,17 @@
   (setq *sprite-tex* (tex-png:make-texture-from-png "sprite.png"))
   (setq *tileset-tex* (tex-png:make-texture-from-png "tileset.png")))
 
-(defun render ()
-  ;; clear screen
-  (gl:clear :color-buffer)
-  ;; rotation
+(defun update ()
   (incf *rot* 0.2)
+  (when (key-down :d) (incf *camera-x* 1.5))
+  (when (key-down :a) (incf *camera-x* -1.5))
+  (when (key-down :w) (incf *camera-y* -1.5))
+  (when (key-down :s) (incf *camera-y* 1.5)))
+
+(defun render ()
+  (gl:clear :color-buffer)
   (gl:load-identity)
-  (draw-tilemap *tileset-tex* *tilemap* *rot* *rot*)
+  (draw-tilemap *tileset-tex* *tilemap* *camera-x* *camera-y*)
   (draw-sprite :texture *sprite-tex*
                :rgba (list
                       0.5
@@ -74,10 +84,14 @@
   "Run the game loop that handles input, rendering, etc"
   (sdl2:with-event-loop (:method :poll)
     (:keydown (:keysym keysym)
+              (setf (gethash (sdl2:scancode-value keysym) *key-state*) t)
               (when (sdl2:scancode= (sdl2:scancode-value keysym)
                                     :scancode-escape)
                 (sdl2:push-event :quit)))
+    (:keyup (:keysym keysym)
+            (setf (gethash (sdl2:scancode-value keysym) *key-state*) nil))
     (:idle ()
+           (update)
            (render)
            (sdl2:gl-swap-window win))
     (:quit ()
