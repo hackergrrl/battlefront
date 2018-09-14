@@ -5,8 +5,6 @@
 (require :sdl2)
 (require :cl-opengl)
 
-(defparameter *key-state* (make-hash-table))
-
 (defparameter *rot* 0)
 (defparameter *camera-x* 0)
 (defparameter *camera-y* 0)
@@ -16,32 +14,15 @@
 ;; fun init:
 ;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
 
-(defun key-down (key)
-  (let ((scancode (intern (concatenate
-                           'string "SCANCODE-" (string-upcase key)) "KEYWORD")))
-    (gethash (sdl2:scancode-key-to-value scancode) *key-state*)))
-
 (defun main ()
-  "The entry point of our game."
-  (sdl2:with-init (:everything)
-    (debug-log "Using SDL library version: ~D.~D.~D~%"
-               sdl2-ffi:+sdl-major-version+
-               sdl2-ffi:+sdl-minor-version+
-               sdl2-ffi:+sdl-patchlevel+)
-    (sdl2:with-window (win :title "Battlefront :: Alpha"
-                           :w 640 :h 480 :flags '(:shown :opengl))
-      (sdl2:with-gl-context (gl-context win)
-        (setup-gl win gl-context)
-        (main-loop win)))))
+  (engine:init :title "Battlefront"
+               :w 640 :h 480
+               :init 'init
+               :update 'update
+               :render 'render))
 
-(defun debug-log (msg &rest args)
-  "Output and flush MSG to STDOUT with argument"
-  (apply #'format t msg args)
-  (finish-output))
-
-(defun setup-gl (win gl-context)
+(defun init (win gl-context)
   "Setup OpenGL with the window WIN and the gl context GL-CONTEXT"
-  (debug-log "Setting up window/gl.~%")
   (sdl2:gl-make-current win gl-context)
   (gl:enable :texture-2d)
   (gl:enable :blend)
@@ -57,10 +38,10 @@
 
 (defun update ()
   (incf *rot* 0.2)
-  (when (key-down :d) (incf *camera-x* 1.5))
-  (when (key-down :a) (incf *camera-x* -1.5))
-  (when (key-down :w) (incf *camera-y* -1.5))
-  (when (key-down :s) (incf *camera-y* 1.5)))
+  (when (engine:key-down :d) (incf *camera-x* 1.5))
+  (when (engine:key-down :a) (incf *camera-x* -1.5))
+  (when (engine:key-down :w) (incf *camera-y* -1.5))
+  (when (engine:key-down :s) (incf *camera-y* 1.5)))
 
 (defun render ()
   (gl:clear :color-buffer)
@@ -79,23 +60,6 @@
                :scale-x (+ 1.2 (* 0.2 (sin (* 0.13 *rot*))))
                :scale-y (+ 1.2 (* 0.2 (sin (* 0.13 *rot*)))))
   (gl:flush))
-
-(defun main-loop (win)
-  "Run the game loop that handles input, rendering, etc"
-  (sdl2:with-event-loop (:method :poll)
-    (:keydown (:keysym keysym)
-              (setf (gethash (sdl2:scancode-value keysym) *key-state*) t)
-              (when (sdl2:scancode= (sdl2:scancode-value keysym)
-                                    :scancode-escape)
-                (sdl2:push-event :quit)))
-    (:keyup (:keysym keysym)
-            (setf (gethash (sdl2:scancode-value keysym) *key-state*) nil))
-    (:idle ()
-           (update)
-           (render)
-           (sdl2:gl-swap-window win))
-    (:quit ()
-           t)))
 
 (defun draw-sprite (&key texture
                       (width 32.0) (height 32.0)

@@ -11,4 +11,5 @@
                #:pngload)
   :components ((:file "package")
                (:file "tex-png")
+               (:file "engine")
                (:file "battlefront")))
