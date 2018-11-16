@@ -1,5 +1,7 @@
 (in-package #:engine)
 
+(defparameter *frame-count* 0)
+(defparameter *last-time-fps-recorded* 0)
 (defparameter *key-state* (make-hash-table))
 
 (defun key-down (key)
@@ -31,6 +33,15 @@
     (:keyup (:keysym keysym)
             (setf (gethash (sdl2:scancode-value keysym) *key-state*) nil))
     (:idle ()
+           ;; FPS calculations
+           (incf *frame-count*)
+           (if (> (- (get-internal-real-time) *last-time-fps-recorded*) 1000)
+               (progn
+                 (debug-log "FPS: ~D~&" *frame-count*)
+                 (setf *frame-count* 0
+                       *last-time-fps-recorded* (get-internal-real-time))))
+
+           ;; Update + render
            (funcall update)
            (funcall render)
            (sdl2:gl-swap-window win))

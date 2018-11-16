@@ -5,6 +5,7 @@
 (require :sdl2)
 (require :cl-opengl)
 
+(defparameter *camera-x* 0)
 (defparameter *rot* 0)
 (defparameter *camera-x* 0)
 (defparameter *camera-y* 0)
@@ -105,7 +106,7 @@
       (dotimes (j 16)
         (let* ((tile-x (+ i (floor (/ x 32))))
                (tile-y (+ j (floor (/ y 32))))
-               (tile-id (aref-2d tilemap tile-x tile-y 9))
+               (tile-id (aref-2d tilemap tile-x tile-y 10))
                (u (* tile-id tw))
                (v 0)
                (px (- (* i 32) pox))
