@@ -12,4 +12,5 @@
   :components ((:file "package")
                (:file "tex-png")
                (:file "engine")
+               (:file "ecs")
                (:file "battlefront")))
