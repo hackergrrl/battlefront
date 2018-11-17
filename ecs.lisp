@@ -15,9 +15,9 @@
 ;; Q: when I eval stuff in emacs using eg. C-c C-c, what package does it get loaded into? The one that my REPL is in? Into whatever 'in-package' is at the top of the file?
 ;; A: evaluate *PACKAGE*: it will tell you the current package
 
-;; GOAL: write DEFSYSTEM macro
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; public
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defstruct world
   (max-id 0)
@@ -62,7 +62,9 @@
         (push e res)))
     res))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; private
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun entity-components-names (e)
   (mapcar
@@ -82,19 +84,14 @@
         (setf (nth pos (world-systems world)) system)
         (push system (world-systems world)))))
 
-;; TODO: defsystem macro
-;; - check if system already exists: replace it; otherwise add
+(defmacro defsystem (name world args &rest forms)
+  `(add-system ,world ,(string name) (quote ,(cdr args)) (lambda (,(first args)) ,@forms)))
 
-;;-----------------------------------
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; example code
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; example
-
-;; Q: any way to skip needing specify the WORLD instance here in DEFSYSTEM?
-
-;;(defsystem gravity (e :pos :physics)
-;;  (decf (physics-z-vel (entity-get-component e :physics)) 0.01))
-
-(defun system-gravity (e)
+(defsystem gravity *world* (e :pos :physics)
   (decf (physics-z-vel (entity-get-component e :physics)) 0.01))
 
 (defstruct pos

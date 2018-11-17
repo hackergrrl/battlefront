@@ -2,6 +2,8 @@
 
 (in-package #:battlefront)
 
+;; GOAL: add components + systems s.t. player can be controlled with keyboard
+
 (require :sdl2)
 (require :cl-opengl)
 

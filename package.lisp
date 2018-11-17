@@ -13,7 +13,7 @@
 
 (defpackage #:ecs
   (:use #:cl)
-  (:export :create-entity 
+  (:export :create-entity :defsystem
            :make-world :world-tick :world-entities :world-systems :world-p
            :entity-add-component :entity-components :entity-get-component
            :entity-id :entity-name :entity-p))
