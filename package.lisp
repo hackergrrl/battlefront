@@ -10,3 +10,10 @@
 (defpackage #:engine
   (:use #:cl)
   (:export :init :key-down))
+
+(defpackage #:ecs
+  (:use #:cl)
+  (:export :create-entity 
+           :make-world :world-tick :world-entities :world-systems :world-p
+           :entity-add-component :entity-components :entity-get-component
+           :entity-id :entity-name :entity-p))
