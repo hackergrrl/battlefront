@@ -4,8 +4,32 @@
 
 ;; GOAL: add components + systems s.t. player can be controlled with keyboard
 
+;; [x] basic ecs.lisp integration
+;; [ ] load in skirmish online player sprite
+;; [ ] WASD movement controls
+;; [ ] mouse-look rotation
+;; [ ] camera entity + component that follows player
+
 (require :sdl2)
 (require :cl-opengl)
+
+(defstruct pos
+  (x 0)
+  (y 0)
+  (z 0))
+
+(defstruct physics
+  (x-vel 0)
+  (y-vel 0)
+  (z-vel 0))
+
+(defparameter *world* (ecs:make-world))
+
+(defparameter *player* (ecs:create-entity *world*
+                                          :components (list (make-pos)
+                                                            (make-physics))))
+(setf (pos-x (ecs:entity-get-component *player* :pos)) 320)
+(setf (pos-y (ecs:entity-get-component *player* :pos)) 0)
 
 (defparameter *camera-x* 0)
 (defparameter *rot* 0)
@@ -16,6 +40,21 @@
 (defparameter *tilemap* (make-array (list 20 20)))
 ;; fun init:
 ;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
+
+(ecs:defsystem gravity *world* (e :pos :physics)
+           (incf (physics-y-vel (ecs:entity-get-component e :physics)) 0.5))
+
+(ecs:defsystem 2d-physics *world* (e :pos :physics)
+           (incf (pos-x (ecs:entity-get-component e :pos))
+                 (physics-x-vel (ecs:entity-get-component e :physics)))
+           (incf (pos-y (ecs:entity-get-component e :pos))
+                 (physics-y-vel (ecs:entity-get-component e :physics))))
+
+(ecs:defsystem bounce *world* (e :pos :physics)
+               (let ((pos (ecs:entity-get-component e :pos))
+                     (vel (ecs:entity-get-component e :physics)))
+                 (when (> (+ (physics-y-vel vel) (pos-y pos)) 480)
+                     (setf (physics-y-vel vel) (* -0.9 (physics-y-vel vel))))))
 
 (defun main ()
   (engine:init :title "Battlefront"
@@ -44,24 +83,20 @@
   (when (engine:key-down :d) (incf *camera-x* 1.5))
   (when (engine:key-down :a) (incf *camera-x* -1.5))
   (when (engine:key-down :w) (incf *camera-y* -1.5))
-  (when (engine:key-down :s) (incf *camera-y* 1.5)))
+  (when (engine:key-down :s) (incf *camera-y* 1.5))
+  (ecs:world-tick *world*))
 
 (defun render ()
   (gl:clear :color-buffer)
   (gl:load-identity)
   (draw-tilemap *tileset-tex* *tilemap* *camera-x* *camera-y*)
   (draw-sprite :texture *sprite-tex*
-               :rgba (list
-                      0.5
-                      (cos (* 0.2 *rot*))
-                      0.5
-                      1.0)
-               :x 320 :y 240
-               :width 128 :height 128
-               :rot *rot*
-               :center-x 0.5 :center-y 0.5
-               :scale-x (+ 1.2 (* 0.2 (sin (* 0.13 *rot*))))
-               :scale-y (+ 1.2 (* 0.2 (sin (* 0.13 *rot*)))))
+               :rgba '(1 1 1 1)
+               :x (pos-x (ecs:entity-get-component *player* :pos))
+               :y (pos-y (ecs:entity-get-component *player* :pos))
+               :width 64 :height 64
+               :rot 0
+               :center-x 0.5 :center-y 0.5)
   (gl:flush))
 
 (defun draw-sprite (&key texture
