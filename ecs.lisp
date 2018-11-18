@@ -1,3 +1,10 @@
+(defpackage #:ecs
+  (:use #:cl)
+  (:export :create-entity :defsystem
+           :make-world :world-tick :world-entities :world-systems :world-p
+           :entity-add-component :entity-components :entity-get-component
+           :entity-id :entity-name :entity-p))
+
 (in-package #:ecs)
 
 ;; Q: how could I test that I exported a symbol from a package correctly?
@@ -90,6 +97,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; example code
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defparameter *world* (make-world))
 
 (defsystem gravity *world* (e :pos :physics)
   (decf (physics-z-vel (entity-get-component e :physics)) 0.01))
