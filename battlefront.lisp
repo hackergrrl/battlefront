@@ -1,4 +1,5 @@
-;;;; battlefront.lisp
+(defpackage #:battlefront
+  (:use #:cl #:3d-vectors))
 
 (in-package #:battlefront)
 
@@ -13,26 +14,18 @@
 (require :sdl2)
 (require :cl-opengl)
 
-(defstruct pos
-  (x 0)
-  (y 0)
-  (z 0))
-
 (defstruct physics
-  (xvel 0)
-  (yvel 0)
-  (zvel 0))
+  (pos (vec3 0 0 0))
+  (vel (vec3 0 0 0)))
 
 (defstruct plr-controller)
 
 (defparameter *world* (ecs:make-world))
-
-(defparameter *player* (ecs:create-entity *world*
-                                          :components (list (make-pos)
-                                                            (make-physics)
-                                                            (make-plr-controller))))
-(setf (pos-x (ecs:getcmp :pos *player*)) 320)
-(setf (pos-y (ecs:getcmp :pos *player*)) 240)
+(defparameter *player*
+  (ecs:create-entity *world*
+                     :components (list
+                                  (make-physics :pos (vec3 320 240 0))
+                                  (make-plr-controller))))
 
 (defparameter *camera-x* 0)
 (defparameter *rot* 0)
@@ -44,28 +37,27 @@
 ;; fun init:
 ;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
 
-(ecs:defsystem 2d-physics *world* (e :pos :physics)
-               (let ((pos (ecs:getcmp :pos e))
-                     (vel (ecs:getcmp :physics e))
+(ecs:defsystem 2d-physics *world* (e :physics)
+               (let ((p (ecs:getcmp :physics e))
                      (gnd-friction 0.93))
                  ;; move pos by velocity
-                 (incf (pos-x pos) (physics-xvel vel))
-                 (incf (pos-y pos) (physics-yvel vel))
+                 (nv+ (physics-pos p) (physics-vel p))
                  ;; apply ground friction
-                 (setf (physics-xvel vel) (* gnd-friction (physics-xvel vel)))
-                 (setf (physics-yvel vel) (* gnd-friction (physics-yvel vel)))))
+                 (nv* (physics-vel p) gnd-friction)))
 
-(ecs:defsystem player-controller *world* (e :pos :physics :plr-controller)
-               (let* ((vel (ecs:getcmp :physics e))
+(ecs:defsystem player-controller *world* (e :physics :plr-controller)
+               (let* ((p (ecs:getcmp :physics e))
                       (speed 0.15)
-                      (xoffset (* speed (+
-                                (if (engine:key-down :d) 1 0)
-                                (if (engine:key-down :a) -1 0))))
-                      (yoffset (* speed (+
-                                (if (engine:key-down :w) -1 0)
-                                (if (engine:key-down :s) 1 0)))))
-                 (incf (physics-xvel vel) xoffset)
-                 (incf (physics-yvel vel) yoffset)))
+                      (input (vec3
+                               (* speed (+
+                                         (if (engine:key-down :d) 1 0)
+                                         (if (engine:key-down :a) -1 0)))
+                               (* speed (+
+                                         (if (engine:key-down :w) -1 0)
+                                         (if (engine:key-down :s) 1 0)))
+                               0))
+                      (force (v* (nvunit-safe input) speed)))
+                 (nv+ (physics-vel p) force)))
 
 (defun main ()
   (engine:init :title "Battlefront"
@@ -99,8 +91,8 @@
   (draw-tilemap *tileset-tex* *tilemap* *camera-x* *camera-y*)
   (draw-sprite :texture *sprite-tex*
                :rgba '(1 1 1 1)
-               :x (pos-x (ecs:getcmp :pos *player*))
-               :y (pos-y (ecs:getcmp :pos *player*))
+               :x (vx3 (physics-pos (ecs:getcmp :physics *player*)))
+               :y (vy3 (physics-pos (ecs:getcmp :physics *player*)))
                :width 64 :height 64
                :rot 0
                :center-x 0.5 :center-y 0.5)
@@ -174,3 +166,8 @@
           (>= y (array-dimension array 1)))
       default
       (aref array x y)))
+
+(defun nvunit-safe (v)
+  (if (equal 0.0 (vlength v))
+      v
+      (nvunit v)))

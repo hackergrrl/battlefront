@@ -8,7 +8,8 @@
   :serial t
   :depends-on (#:sdl2
                #:cl-opengl
-               #:pngload)
+               #:pngload
+               #:3d-vectors)
   :components ((:file "package")
                (:file "tex-png")
                (:file "engine")
