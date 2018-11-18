@@ -8,7 +8,9 @@
 ;; [x] basic ecs.lisp integration
 ;; [x] load in skirmish online player sprite
 ;; [x] WASD movement controls
-;; [ ] mouse-look rotation
+;; [x] use vectors
+;; [x] normalize input direction
+;; [x] mouse-look rotation
 ;; [ ] camera entity + component that follows player
 
 (require :sdl2)
@@ -16,7 +18,8 @@
 
 (defstruct physics
   (pos (vec3 0 0 0))
-  (vel (vec3 0 0 0)))
+  (vel (vec3 0 0 0))
+  (rot 0))
 
 (defstruct plr-controller)
 
@@ -27,7 +30,8 @@
                                   (make-physics :pos (vec3 320 240 0))
                                   (make-plr-controller))))
 
-(defparameter *camera-x* 0)
+(defparameter *screen-width* 640)
+(defparameter *screen-height* 480)
 (defparameter *rot* 0)
 (defparameter *camera-x* 0)
 (defparameter *camera-y* 0)
@@ -57,11 +61,12 @@
                                          (if (engine:key-down :s) 1 0)))
                                0))
                       (force (v* (nvunit-safe input) speed)))
-                 (nv+ (physics-vel p) force)))
+                 (nv+ (physics-vel p) force)
+                 (setf (physics-rot p) (screen-xy-to-rot (engine:mouse-pos :x) (engine:mouse-pos :y)))))
 
 (defun main ()
   (engine:init :title "Battlefront"
-               :w 640 :h 480
+               :w *screen-width* :h *screen-height*
                :init 'init
                :update 'update
                :render 'render))
@@ -94,7 +99,7 @@
                :x (vx3 (physics-pos (ecs:getcmp :physics *player*)))
                :y (vy3 (physics-pos (ecs:getcmp :physics *player*)))
                :width 64 :height 64
-               :rot 0
+               :rot (rad2deg (physics-rot (ecs:getcmp :physics *player*)))
                :center-x 0.5 :center-y 0.5)
   (gl:flush))
 
@@ -168,6 +173,16 @@
       (aref array x y)))
 
 (defun nvunit-safe (v)
+  "Normalizes \"v\" without crashing when the zero-vector is given."
   (if (equal 0.0 (vlength v))
       v
       (nvunit v)))
+
+(defun screen-xy-to-rot (sx sy)
+  "Convert screen coordinates to an angle from the center of the screen."
+  (let ((x (- sx (/ *screen-width* 2.0)))
+        (y (- sy (/ *screen-height* 2.0))))
+    (atan y x)))
+
+(defun rad2deg (r)
+  (* r (/ 180.0 PI)))
