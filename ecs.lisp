@@ -2,7 +2,7 @@
   (:use #:cl)
   (:export :create-entity :defsystem
            :make-world :world-tick :world-entities :world-systems :world-p
-           :entity-add-component :entity-components :entity-get-component
+           :entity-add-component :entity-components :getcmp
            :entity-id :entity-name :entity-p))
 
 (in-package #:ecs)
@@ -38,9 +38,9 @@
 
 (defun world-tick (world)
   (dolist (sys (world-systems world))
-    (format t "running system ~s~%" (first sys))
+;;    (format t "running system ~s~%" (first sys))
     (dolist (e (apply #'world-query (cons world (second sys))))
-      (format t "running system ~s on entity ~s~%" (first sys) (entity-id e))
+;;      (format t "running system ~s on entity ~s~%" (first sys) (entity-id e))
       (funcall (third sys) e))))
 
 (defun create-entity (world &key (name "an entity") (components nil))
@@ -53,7 +53,7 @@
   (setf (entity-components entity)
         (append (entity-components entity) components)))
 
-(defun entity-get-component (entity cname)
+(defun getcmp (cname entity)
   (first (remove-if-not
           (lambda (c) (equal (string (type-of c)) (string cname)))
           (entity-components entity))))

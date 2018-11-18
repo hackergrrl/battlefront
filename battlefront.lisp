@@ -5,8 +5,8 @@
 ;; GOAL: add components + systems s.t. player can be controlled with keyboard
 
 ;; [x] basic ecs.lisp integration
-;; [ ] load in skirmish online player sprite
-;; [ ] WASD movement controls
+;; [x] load in skirmish online player sprite
+;; [x] WASD movement controls
 ;; [ ] mouse-look rotation
 ;; [ ] camera entity + component that follows player
 
@@ -19,17 +19,20 @@
   (z 0))
 
 (defstruct physics
-  (x-vel 0)
-  (y-vel 0)
-  (z-vel 0))
+  (xvel 0)
+  (yvel 0)
+  (zvel 0))
+
+(defstruct plr-controller)
 
 (defparameter *world* (ecs:make-world))
 
 (defparameter *player* (ecs:create-entity *world*
                                           :components (list (make-pos)
-                                                            (make-physics))))
-(setf (pos-x (ecs:entity-get-component *player* :pos)) 320)
-(setf (pos-y (ecs:entity-get-component *player* :pos)) 0)
+                                                            (make-physics)
+                                                            (make-plr-controller))))
+(setf (pos-x (ecs:getcmp :pos *player*)) 320)
+(setf (pos-y (ecs:getcmp :pos *player*)) 240)
 
 (defparameter *camera-x* 0)
 (defparameter *rot* 0)
@@ -41,20 +44,28 @@
 ;; fun init:
 ;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
 
-(ecs:defsystem gravity *world* (e :pos :physics)
-           (incf (physics-y-vel (ecs:entity-get-component e :physics)) 0.5))
-
 (ecs:defsystem 2d-physics *world* (e :pos :physics)
-           (incf (pos-x (ecs:entity-get-component e :pos))
-                 (physics-x-vel (ecs:entity-get-component e :physics)))
-           (incf (pos-y (ecs:entity-get-component e :pos))
-                 (physics-y-vel (ecs:entity-get-component e :physics))))
+               (let ((pos (ecs:getcmp :pos e))
+                     (vel (ecs:getcmp :physics e))
+                     (gnd-friction 0.93))
+                 ;; move pos by velocity
+                 (incf (pos-x pos) (physics-xvel vel))
+                 (incf (pos-y pos) (physics-yvel vel))
+                 ;; apply ground friction
+                 (setf (physics-xvel vel) (* gnd-friction (physics-xvel vel)))
+                 (setf (physics-yvel vel) (* gnd-friction (physics-yvel vel)))))
 
-(ecs:defsystem bounce *world* (e :pos :physics)
-               (let ((pos (ecs:entity-get-component e :pos))
-                     (vel (ecs:entity-get-component e :physics)))
-                 (when (> (+ (physics-y-vel vel) (pos-y pos)) 480)
-                     (setf (physics-y-vel vel) (* -0.9 (physics-y-vel vel))))))
+(ecs:defsystem player-controller *world* (e :pos :physics :plr-controller)
+               (let* ((vel (ecs:getcmp :physics e))
+                      (speed 0.15)
+                      (xoffset (* speed (+
+                                (if (engine:key-down :d) 1 0)
+                                (if (engine:key-down :a) -1 0))))
+                      (yoffset (* speed (+
+                                (if (engine:key-down :w) -1 0)
+                                (if (engine:key-down :s) 1 0)))))
+                 (incf (physics-xvel vel) xoffset)
+                 (incf (physics-yvel vel) yoffset)))
 
 (defun main ()
   (engine:init :title "Battlefront"
@@ -75,15 +86,11 @@
   (gl:matrix-mode :modelview)
   (gl:load-identity)
   (gl:clear-color 0.0 0.0 0.0 1.0)
-  (setq *sprite-tex* (tex-png:make-texture-from-png "sprite.png"))
+  (setq *sprite-tex* (tex-png:make-texture-from-png "player.png"))
   (setq *tileset-tex* (tex-png:make-texture-from-png "tileset.png")))
 
 (defun update ()
   (incf *rot* 0.2)
-  (when (engine:key-down :d) (incf *camera-x* 1.5))
-  (when (engine:key-down :a) (incf *camera-x* -1.5))
-  (when (engine:key-down :w) (incf *camera-y* -1.5))
-  (when (engine:key-down :s) (incf *camera-y* 1.5))
   (ecs:world-tick *world*))
 
 (defun render ()
@@ -92,8 +99,8 @@
   (draw-tilemap *tileset-tex* *tilemap* *camera-x* *camera-y*)
   (draw-sprite :texture *sprite-tex*
                :rgba '(1 1 1 1)
-               :x (pos-x (ecs:entity-get-component *player* :pos))
-               :y (pos-y (ecs:entity-get-component *player* :pos))
+               :x (pos-x (ecs:getcmp :pos *player*))
+               :y (pos-y (ecs:getcmp :pos *player*))
                :width 64 :height 64
                :rot 0
                :center-x 0.5 :center-y 0.5)

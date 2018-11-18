@@ -1,13 +1,23 @@
+(defpackage #:engine
+  (:use #:cl)
+  (:export :init :key-down :mouse-pos))
+
 (in-package #:engine)
 
 (defparameter *frame-count* 0)
 (defparameter *last-time-fps-recorded* 0)
 (defparameter *key-state* (make-hash-table))
+(defparameter *mouse-pos* (make-array 2))
 
 (defun key-down (key)
   (let ((scancode (intern (concatenate
                            'string "SCANCODE-" (string-upcase key)) "KEYWORD")))
     (gethash (sdl2:scancode-key-to-value scancode) *key-state*)))
+
+(defun mouse-pos (elm)
+  (if (equal elm :x) (aref *mouse-pos* 0)
+      (if (equal elm :y) (aref *mouse-pos* 1)
+          nil)))
 
 (defun init (&key title w h init update render)
   "The entry point of our game."
@@ -32,6 +42,9 @@
                 (sdl2:push-event :quit)))
     (:keyup (:keysym keysym)
             (setf (gethash (sdl2:scancode-value keysym) *key-state*) nil))
+    (:mousemotion (:x x :y y)
+                  (setf (aref *mouse-pos* 0) x
+                        (aref *mouse-pos* 1) y))
     (:idle ()
            ;; FPS calculations
            (incf *frame-count*)
