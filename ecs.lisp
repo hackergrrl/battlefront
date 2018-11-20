@@ -19,31 +19,33 @@
 ;; Q: when I eval stuff in emacs using eg. C-c C-c, what package does it get loaded into? The one that my REPL is in? Into whatever 'in-package' is at the top of the file?
 ;; A: evaluate *PACKAGE*: it will tell you the current package
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; public
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defstruct world
   (max-id 0)
   entities
   systems)
+
+(defparameter *world* (make-world))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; public
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defstruct entity
   (name "an entity")
   id
   components)
 
-(defun world-tick (world)
-  (dolist (sys (world-systems world))
+(defun world-tick ()
+  (dolist (sys (world-systems *world*))
 ;;    (format t "running system ~s~%" (first sys))
-    (dolist (e (apply #'world-query (cons world (second sys))))
+    (dolist (e (funcall #'world-query (second sys)))
 ;;      (format t "running system ~s on entity ~s~%" (first sys) (entity-id e))
       (funcall (third sys) e))))
 
-(defun create-entity (world &key (name "an entity") (components nil))
-  (incf (world-max-id world))
-  (let ((entity (make-entity :name name :id (world-max-id world) :components components)))
-    (push entity (world-entities world))
+(defun create-entity (components &optional name)
+  (incf (world-max-id *world*))
+  (let ((entity (make-entity :name name :id (world-max-id *world*) :components components)))
+    (push entity (world-entities *world*))
     entity))
 
 (defun entity-add-component (entity &rest components)
@@ -55,16 +57,19 @@
           (lambda (c) (equal (string (type-of c)) (string cname)))
           (entity-components entity))))
 
-(defun world-query (world &rest cs)
+(defun world-query (cs)
   (let ((css (mapcar 'string cs))
         (res nil))
-    (dolist (e (world-entities world))
+    (dolist (e (world-entities *world*))
       (when (subsetp
              css
              (entity-components-names e)
              :test #'equal)
         (push e res)))
     res))
+
+(defmacro defsystem (name args &rest forms)
+  `(add-system ,(string name) (quote ,(cdr args)) (lambda (,(first args)) ,@forms)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; private
@@ -75,9 +80,9 @@
    (lambda (c) (string (type-of c)))
    (entity-components e)))
 
-(defun add-system (world name components fn)
+(defun add-system (name components fn)
   (let ((system (list name (mapcar 'string components) fn)))
-    (replace-system world system)))
+    (replace-system *world* system)))
 
 (defun system-equals? (sys1 sys2)
   (equal (first sys1) (first sys2)))
@@ -87,25 +92,3 @@
     (if (numberp pos)
         (setf (nth pos (world-systems world)) system)
         (push system (world-systems world)))))
-
-(defmacro defsystem (name world args &rest forms)
-  `(add-system ,world ,(string name) (quote ,(cdr args)) (lambda (,(first args)) ,@forms)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; example code
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defparameter *world* (make-world))
-
-(defsystem gravity *world* (e :pos :physics)
-  (decf (physics-z-vel (entity-get-component e :physics)) 0.01))
-
-(defstruct pos
-  (x 0)
-  (y 0)
-  (z 0))
-
-(defstruct physics
-  (x-vel 0)
-  (y-vel 0)
-  (z-vel 0))

@@ -24,25 +24,20 @@
 
 (defstruct plr-controller)
 
-(defparameter *world* (ecs:make-world))
-(defparameter *player*
-  (ecs:create-entity *world*
-                     :components (list
-                                  (make-physics :pos (vec3 320 240 0))
-                                  (make-plr-controller))))
+(defparameter *player* (ecs:create-entity (list
+                                           (make-physics :pos (vec3 320 240 0))
+                                           (make-plr-controller))))
 
 (defparameter *screen-width* 640)
 (defparameter *screen-height* 480)
 (defparameter *rot* 0)
-(defparameter *camera-x* 0)
-(defparameter *camera-y* 0)
 (defparameter *sprite-tex* nil)
 (defparameter *tileset-tex* nil)
 (defparameter *tilemap* (make-array (list 20 20)))
 ;; fun init:
 ;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
 
-(ecs:defsystem 2d-physics *world* (e :physics)
+(ecs:defsystem 2d-physics (e :physics)
                (let ((p (ecs:getcmp :physics e))
                      (gnd-friction 0.93))
                  ;; move pos by velocity
@@ -50,7 +45,7 @@
                  ;; apply ground friction
                  (nv* (physics-vel p) gnd-friction)))
 
-(ecs:defsystem player-controller *world* (e :physics :plr-controller)
+(ecs:defsystem player-controller (e :physics :plr-controller)
                (let* ((p (ecs:getcmp :physics e))
                       (speed 0.15)
                       (input (vec3
@@ -89,12 +84,12 @@
 
 (defun update ()
   (incf *rot* 0.2)
-  (ecs:world-tick *world*))
+  (ecs:world-tick))
 
 (defun render ()
   (gl:clear :color-buffer)
   (gl:load-identity)
-  (draw-tilemap *tileset-tex* *tilemap* *camera-x* *camera-y*)
+  (draw-tilemap *tileset-tex* *tilemap* 0 0)
   (draw-sprite :texture *sprite-tex*
                :rgba '(1 1 1 1)
                :x (vx3 (physics-pos (ecs:getcmp :physics *player*)))
