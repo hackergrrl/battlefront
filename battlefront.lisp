@@ -11,7 +11,8 @@
 ;; [x] use vectors
 ;; [x] normalize input direction
 ;; [x] mouse-look rotation
-;; [ ] camera entity + component that follows player
+;; [ ] camera component + camera entity + target follow
+;; [ ] draw-sprite component + render function + render query pass
 
 (require :sdl2)
 (require :cl-opengl)

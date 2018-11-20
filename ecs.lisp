@@ -1,11 +1,8 @@
-(defpackage #:ecs
-  (:use #:cl)
-  (:export :create-entity :defsystem
-           :make-world :world-tick :world-entities :world-systems :world-p
-           :entity-add-component :entity-components :getcmp
-           :entity-id :entity-name :entity-p))
-
 (in-package #:ecs)
+
+;; inspiration:
+;; - https://github.com/nandryshak/ECS
+;; - https://github.com/julian3ng/ecs/blob/master/ecs.lisp
 
 ;; Q: how could I test that I exported a symbol from a package correctly?
 ;; A: eval the defpackage expr and try to access ecs:foobar from the CL-USER package in the REPL
