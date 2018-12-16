@@ -69,7 +69,16 @@
     res))
 
 (defmacro defsystem (name args &rest forms)
-  `(add-system ,(string name) (quote ,(cdr args)) (lambda (,(first args)) ,@forms)))
+  `(add-system ,(string name) (quote ,(cdr args))
+               (lambda (,(first args))
+                 (letify-components ,(first args) ,(cdr args) ,@forms))))
+
+(defmacro letify-components (e components &body forms)
+  `(let
+       ,(mapcar
+         (lambda (c) `(,(intern (symbol-name c)) (ecs:getcmp ,c ,e)))
+         components)
+     ,@forms))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; private

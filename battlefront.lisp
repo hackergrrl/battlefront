@@ -44,16 +44,14 @@
 ;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
 
 (ecs:defsystem 2d-physics (e :physics)
-               (let ((p (ecs:getcmp :physics e))
-                     (gnd-friction 0.93))
+               (let ((gnd-friction 0.93))
                  ;; move pos by velocity
-                 (nv+ (physics-pos p) (physics-vel p))
+                 (nv+ (physics-pos physics) (physics-vel physics))
                  ;; apply ground friction
-                 (nv* (physics-vel p) gnd-friction)))
+                 (nv* (physics-vel physics) gnd-friction)))
 
 (ecs:defsystem player-controller (e :physics :plr-controller)
-               (let* ((p (ecs:getcmp :physics e))
-                      (speed 0.15)
+               (let* ((speed 0.15)
                       (input (vec3
                                (* speed (+
                                          (if (engine:key-down :d) 1 0)
@@ -63,11 +61,13 @@
                                          (if (engine:key-down :s) 1 0)))
                                0))
                       (force (v* (nvunit-safe input) speed)))
-                 (nv+ (physics-vel p) force)
-                 (setf (physics-rot p) (screen-xy-to-rot (engine:mouse-pos :x) (engine:mouse-pos :y)))))
+                 (nv+ (physics-vel physics) force)
+                 (setf (physics-rot physics)
+                       (screen-xy-to-rot (engine:mouse-pos :x)
+                                         (engine:mouse-pos :y)))))
 
 (ecs:defsystem follow-camera-target (e :physics :camera)
-               (let ((target (camera-target (ecs:getcmp :camera e))))
+               (let ((target (camera-target camera)))
                  (if (not (null target))
                      (let ((pos (physics-pos (ecs:getcmp :physics e)))
                            (tpos (physics-pos (ecs:getcmp :physics target))))
