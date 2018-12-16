@@ -11,7 +11,7 @@
 ;; [x] use vectors
 ;; [x] normalize input direction
 ;; [x] mouse-look rotation
-;; [ ] camera component + camera entity + target follow
+;; [x] camera component + camera entity + target follow
 ;; [ ] draw-sprite component + render function + render query pass
 
 (require :sdl2)
@@ -24,9 +24,15 @@
 
 (defstruct plr-controller)
 
+(defstruct camera
+  (target nil))
+
 (defparameter *player* (ecs:create-entity (list
                                            (make-physics :pos (vec3 320 240 0))
                                            (make-plr-controller))))
+(defparameter *camera* (ecs:create-entity (list
+                                           (make-physics :pos (vec3 0 0 0))
+                                           (make-camera))))
 
 (defparameter *screen-width* 640)
 (defparameter *screen-height* 480)
@@ -89,14 +95,19 @@
 (defun render ()
   (gl:clear :color-buffer)
   (gl:load-identity)
-  (draw-tilemap *tileset-tex* *tilemap* 0 0)
-  (draw-sprite :texture *sprite-tex*
-               :rgba '(1 1 1 1)
-               :x (vx3 (physics-pos (ecs:getcmp :physics *player*)))
-               :y (vy3 (physics-pos (ecs:getcmp :physics *player*)))
-               :width 64 :height 64
-               :rot (rad2deg (physics-rot (ecs:getcmp :physics *player*)))
-               :center-x 0.5 :center-y 0.5)
+  (let* ((cam-target (camera-target (ecs:getcmp :camera *camera*)))
+         (cam-pos (if (null cam-target) (vec3 0 0 0)
+                      (physics-pos (ecs:getcmp :physics cam-target))))
+         (plr-pos (v+ (v- (physics-pos (ecs:getcmp :physics *player*)) cam-pos)
+                      (vec3 320 240 0))))
+    (draw-tilemap *tileset-tex* *tilemap* (vx cam-pos) (vy cam-pos))
+    (draw-sprite :texture *sprite-tex*
+                 :rgba '(1 1 1 1)
+                 :x (vx3 plr-pos)
+                 :y (vy3 plr-pos)
+                 :width 64 :height 64
+                 :rot (rad2deg (physics-rot (ecs:getcmp :physics *player*)))
+                 :center-x 0.5 :center-y 0.5))
   (gl:flush))
 
 (defun draw-sprite (&key texture
