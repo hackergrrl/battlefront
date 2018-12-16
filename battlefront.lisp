@@ -32,7 +32,7 @@
                                            (make-plr-controller))))
 (defparameter *camera* (ecs:create-entity (list
                                            (make-physics :pos (vec3 0 0 0))
-                                           (make-camera))))
+                                           (make-camera :target *player*))))
 
 (defparameter *screen-width* 640)
 (defparameter *screen-height* 480)
@@ -66,6 +66,13 @@
                  (nv+ (physics-vel p) force)
                  (setf (physics-rot p) (screen-xy-to-rot (engine:mouse-pos :x) (engine:mouse-pos :y)))))
 
+(ecs:defsystem follow-camera-target (e :physics :camera)
+               (let ((target (camera-target (ecs:getcmp :camera e))))
+                 (if (not (null target))
+                     (let ((pos (physics-pos (ecs:getcmp :physics e)))
+                           (tpos (physics-pos (ecs:getcmp :physics target))))
+                       (nv+ pos (v* (v- tpos pos) 0.3))))))
+
 (defun main ()
   (engine:init :title "Battlefront"
                :w *screen-width* :h *screen-height*
@@ -95,9 +102,7 @@
 (defun render ()
   (gl:clear :color-buffer)
   (gl:load-identity)
-  (let* ((cam-target (camera-target (ecs:getcmp :camera *camera*)))
-         (cam-pos (if (null cam-target) (vec3 0 0 0)
-                      (physics-pos (ecs:getcmp :physics cam-target))))
+  (let* ((cam-pos (physics-pos (ecs:getcmp :physics *camera*)))
          (plr-pos (v+ (v- (physics-pos (ecs:getcmp :physics *player*)) cam-pos)
                       (vec3 320 240 0))))
     (draw-tilemap *tileset-tex* *tilemap* (vx cam-pos) (vy cam-pos))
