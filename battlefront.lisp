@@ -45,7 +45,6 @@
 
 (defparameter *screen-width* 640)
 (defparameter *screen-height* 480)
-(defparameter *rot* 0)
 (defparameter *sprite-tex* nil)
 (defparameter *tileset-tex* nil)
 (defparameter *tilemap* (make-array (list 20 20)))
@@ -105,7 +104,6 @@
   (setq *tileset-tex* (tex-png:make-texture-from-png "tileset.png")))
 
 (defun update ()
-  (incf *rot* 0.2)
   (tick-systems))
 
 (defun render ()
