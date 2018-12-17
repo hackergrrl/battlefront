@@ -2,11 +2,11 @@
 
 (defpackage #:ecs
   (:use #:cl)
-  (:export :create-entity :defsystem
-           :make-world :world-tick :world-entities :world-systems :world-p
-           :entity-add-component :entity-components :getcmp
-           :entity-id :entity-name :entity-p))
+  (:export :entity :defsystem :query-entities :tick-systems :get*))
 
 (defpackage #:tex-png
   (:use #:cl)
   (:export :make-texture-from-png))
+
+(defpackage #:battlefront
+  (:use #:cl #:3d-vectors #:ecs))

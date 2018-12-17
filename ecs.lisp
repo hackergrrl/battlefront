@@ -1,103 +1,62 @@
 (in-package #:ecs)
 
-;; inspiration:
-;; - https://github.com/nandryshak/ECS
-;; - https://github.com/julian3ng/ecs/blob/master/ecs.lisp
+(defparameter *ecs-systems* nil)
+(defparameter *ecs-entities* nil)
 
-;; Q: how could I test that I exported a symbol from a package correctly?
-;; A: eval the defpackage expr and try to access ecs:foobar from the CL-USER package in the REPL
-
-;; Q: can you export defstructs? does that make sense?
-;; A: best answer I could find is: do tab completion on ecs::entity-<TAB> and add each of those dynamic function symbols to the exports
-;; A: I found a function called EXPORT that maybe does dynamic exports? could write a macro that exports a defstruct?
-
-;; Q: can I reset the sbcl lisp image? I don't know what is currently loaded/not loaded.
-
-;; Q: if I change a defpackage to include a new symbol to export, do I need to re-eval anything else to make it visible?
-;; A: no, it doesn't seem so. other than, of course, its definition in the source file
-
-;; Q: when I eval stuff in emacs using eg. C-c C-c, what package does it get loaded into? The one that my REPL is in? Into whatever 'in-package' is at the top of the file?
-;; A: evaluate *PACKAGE*: it will tell you the current package
-
-(defstruct world
-  (max-id 0)
-  entities
-  systems)
-
-(defparameter *world* (make-world))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; public
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defstruct entity
-  (name "an entity")
-  id
+(defun entity (&rest components)
+  (push components *ecs-entities*)
   components)
 
-(defun world-tick ()
-  (dolist (sys (world-systems *world*))
-;;    (format t "running system ~s~%" (first sys))
-    (dolist (e (funcall #'world-query (second sys)))
-;;      (format t "running system ~s on entity ~s~%" (first sys) (entity-id e))
-      (funcall (third sys) e))))
+(defun get-component-names (entity)
+  (let ((n 0))
+    (remove-if-not
+     (lambda (e) (progn (incf n) (equal (mod n 2) 1)))
+     entity)))
 
-(defun create-entity (components &optional name)
-  (incf (world-max-id *world*))
-  (let ((entity (make-entity :name name :id (world-max-id *world*) :components components)))
-    (push entity (world-entities *world*))
-    entity))
+(defun query-entities (components)
+  (remove-if-not
+   (lambda (e)
+     (subsetp components (get-component-names e) :test #'equal))
+   *ecs-entities*))
 
-(defun entity-add-component (entity &rest components)
-  (setf (entity-components entity)
-        (append (entity-components entity) components)))
+(defun tick-systems ()
+  (dolist (system *ecs-systems*)
+    (dolist (e (query-entities (second system)))
+      (funcall (third system) e))))
 
-(defun getcmp (cname entity)
-  (first (remove-if-not
-          (lambda (c) (equal (string (type-of c)) (string cname)))
-          (entity-components entity))))
-
-(defun world-query (cs)
-  (let ((css (mapcar 'string cs))
-        (res nil))
-    (dolist (e (world-entities *world*))
-      (when (subsetp
-             css
-             (entity-components-names e)
-             :test #'equal)
-        (push e res)))
-    res))
-
-(defmacro defsystem (name args &rest forms)
-  `(add-system ,(string name) (quote ,(cdr args))
-               (lambda (,(first args))
-                 (letify-components ,(first args) ,(cdr args) ,@forms))))
-
-(defmacro letify-components (e components &body forms)
-  `(let
-       ,(mapcar
-         (lambda (c) `(,(intern (symbol-name c)) (ecs:getcmp ,c ,e)))
-         components)
-     ,@forms))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; private
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun entity-components-names (e)
+(defun strip-component-bindings (bindings)
+  "Maps (:foo (b :bar) :bax) to (:foo :bar :bax)"
   (mapcar
-   (lambda (c) (string (type-of c)))
-   (entity-components e)))
+   (lambda (b) (if (listp b) (second b) b))
+   bindings))
 
-(defun add-system (name components fn)
-  (let ((system (list name (mapcar 'string components) fn)))
-    (replace-system *world* system)))
+(defmacro letify-bindings (e original-bindings &body forms)
+  "Maps (:foo (b :bar) :bax) to a LET statement with bound vars."
+  (let ((bindings (remove-if-not #'listp original-bindings)))
+    `(let
+         ,(mapcar
+           (lambda (c) `(,(first c) (getf ,e ,(second c))))
+           bindings)
+       ,@forms)))
+
+(defmacro defsystem (name components &body forms)
+  `(let ((sys (list
+               ,(string name)
+               ,(cons 'list (strip-component-bindings (cdr components)))
+               (lambda (,(car components))
+                 (letify-bindings ,(car components) ,(cdr components) ,@forms)))))
+    (replace-system ,(string name) sys)))
 
 (defun system-equals? (sys1 sys2)
   (equal (first sys1) (first sys2)))
 
 (defun replace-system (world system)
-  (let ((pos (position system (world-systems world) :test #'system-equals?)))
+  (let ((pos (position system *ecs-systems* :test #'system-equals?)))
     (if (numberp pos)
-        (setf (nth pos (world-systems world)) system)
-        (push system (world-systems world)))))
+        (setf (nth pos *ecs-systems*) system)
+        (push system *ecs-systems*))))
+
+(defmacro get* (obj &rest indicators)
+  (if (null indicators)
+      obj
+      `(get* (getf ,obj ,(car indicators)) ,@(cdr indicators))))

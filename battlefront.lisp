@@ -1,6 +1,3 @@
-(defpackage #:battlefront
-  (:use #:cl #:3d-vectors))
-
 (in-package #:battlefront)
 
 ;; GOAL: add components + systems s.t. player can be controlled with keyboard
@@ -14,25 +11,37 @@
 ;; [x] camera component + camera entity + target follow
 ;; [ ] draw-sprite component + render function + render query pass
 
+;;; QUESTIONS
+;; Q: how to ignore a param when writing a lambda?
+
 (require :sdl2)
 (require :cl-opengl)
 
-(defstruct physics
-  (pos (vec3 0 0 0))
-  (vel (vec3 0 0 0))
-  (rot 0))
+(defun plist-props (p)
+  "List of all property names on a plist."
+  (let ((n 0))
+    (remove-if-not
+     (lambda (x) (equal 1 (mod (incf n) 2)))
+     p)))
 
-(defstruct plr-controller)
+(defun plist-assign (base new)
+  "Assign keys from plist NEW atop plist BASE."
+  (let ((res (copy-list base)))
+    (dolist (prop (plist-props new))
+      (setf (getf res prop) (getf new prop)))
+    res))
 
-(defstruct camera
-  (target nil))
+(defun make-physics (&rest vals)
+  (plist-assign
+   (list :pos (vec3 0 0 0)
+         :vel (vec3 0 0 0)
+         :rot 0)
+   vals))
 
-(defparameter *player* (ecs:create-entity (list
-                                           (make-physics :pos (vec3 320 240 0))
-                                           (make-plr-controller))))
-(defparameter *camera* (ecs:create-entity (list
-                                           (make-physics :pos (vec3 0 0 0))
-                                           (make-camera :target *player*))))
+(defparameter *player* (entity :physics (make-physics :pos (vec3 320 240 0))
+                               :player-controller t))
+(defparameter *camera* (entity :physics (make-physics :pos (vec3 0 0 0))
+                               :camera (list :target *player*)))
 
 (defparameter *screen-width* 640)
 (defparameter *screen-height* 480)
@@ -43,35 +52,35 @@
 ;; fun init:
 ;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
 
-(ecs:defsystem 2d-physics (e :physics)
-               (let ((gnd-friction 0.93))
-                 ;; move pos by velocity
-                 (nv+ (physics-pos physics) (physics-vel physics))
-                 ;; apply ground friction
-                 (nv* (physics-vel physics) gnd-friction)))
+(defsystem 2d-physics (e (p :physics))
+  (let ((gnd-friction 0.93))
+    ;; move pos by velocity
+    (nv+ (getf p :pos) (getf p :vel))
+    ;; apply ground friction
+    (nv* (getf p :vel) gnd-friction)))
 
-(ecs:defsystem player-controller (e :physics :plr-controller)
-               (let* ((speed 0.15)
-                      (input (vec3
-                               (* speed (+
-                                         (if (engine:key-down :d) 1 0)
-                                         (if (engine:key-down :a) -1 0)))
-                               (* speed (+
-                                         (if (engine:key-down :w) -1 0)
-                                         (if (engine:key-down :s) 1 0)))
-                               0))
-                      (force (v* (nvunit-safe input) speed)))
-                 (nv+ (physics-vel physics) force)
-                 (setf (physics-rot physics)
-                       (screen-xy-to-rot (engine:mouse-pos :x)
-                                         (engine:mouse-pos :y)))))
+(defsystem player-controller (e (p :physics) :player-controller)
+  (let* ((speed 0.15)
+         (input (vec3
+                 (* speed (+
+                           (if (engine:key-down :d) 1 0)
+                           (if (engine:key-down :a) -1 0)))
+                 (* speed (+
+                           (if (engine:key-down :w) -1 0)
+                           (if (engine:key-down :s) 1 0)))
+                 0))
+         (force (v* (nvunit-safe input) speed)))
+    (nv+ (getf p :vel) force)
+    (setf (getf p :rot)
+          (screen-xy-to-rot (engine:mouse-pos :x)
+                            (engine:mouse-pos :y)))))
 
-(ecs:defsystem follow-camera-target (e :physics :camera)
-               (let ((target (camera-target camera)))
-                 (if (not (null target))
-                     (let ((pos (physics-pos (ecs:getcmp :physics e)))
-                           (tpos (physics-pos (ecs:getcmp :physics target))))
-                       (nv+ pos (v* (v- tpos pos) 0.3))))))
+(defsystem follow-camera-target (e (p :physics) (c :camera))
+  (let ((target (getf c :target)))
+    (if (not (null target))
+        (let ((pos (getf p :pos))
+              (tpos (get* target :physics :pos)))
+          (nv+ pos (v* (v- tpos pos) 0.3))))))
 
 (defun main ()
   (engine:init :title "Battlefront"
@@ -97,13 +106,13 @@
 
 (defun update ()
   (incf *rot* 0.2)
-  (ecs:world-tick))
+  (tick-systems))
 
 (defun render ()
   (gl:clear :color-buffer)
   (gl:load-identity)
-  (let* ((cam-pos (physics-pos (ecs:getcmp :physics *camera*)))
-         (plr-pos (v+ (v- (physics-pos (ecs:getcmp :physics *player*)) cam-pos)
+  (let* ((cam-pos (get* *camera* :physics :pos))
+         (plr-pos (v+ (v- (get* *player* :physics :pos) cam-pos)
                       (vec3 320 240 0))))
     (draw-tilemap *tileset-tex* *tilemap* (vx cam-pos) (vy cam-pos))
     (draw-sprite :texture *sprite-tex*
@@ -111,7 +120,7 @@
                  :x (vx3 plr-pos)
                  :y (vy3 plr-pos)
                  :width 64 :height 64
-                 :rot (rad2deg (physics-rot (ecs:getcmp :physics *player*)))
+                 :rot (rad2deg (get* *player* :physics :rot))
                  :center-x 0.5 :center-y 0.5))
   (gl:flush))
 
