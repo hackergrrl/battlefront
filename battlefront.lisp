@@ -43,10 +43,13 @@
 (defparameter *camera* (entity :physics (make-physics :pos (vec3 0 0 0))
                                :camera (list :target *player*)))
 
+(defparameter *textures* (make-hash-table))
+
+(defun texture (name)
+  (gethash name *textures*))
+
 (defparameter *screen-width* 640)
 (defparameter *screen-height* 480)
-(defparameter *sprite-tex* nil)
-(defparameter *tileset-tex* nil)
 (defparameter *tilemap* (make-array (list 20 20)))
 ;; fun init:
 ;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
@@ -100,8 +103,9 @@
   (gl:matrix-mode :modelview)
   (gl:load-identity)
   (gl:clear-color 0.0 0.0 0.0 1.0)
-  (setq *sprite-tex* (tex-png:make-texture-from-png "player.png"))
-  (setq *tileset-tex* (tex-png:make-texture-from-png "tileset.png")))
+  (setf
+   (gethash "player" *textures*) (tex-png:make-texture-from-png "player.png")
+   (gethash "tiles" *textures*) (tex-png:make-texture-from-png "tileset.png")))
 
 (defun update ()
   (tick-systems))
@@ -112,8 +116,8 @@
   (let* ((cam-pos (get* *camera* :physics :pos))
          (plr-pos (v+ (v- (get* *player* :physics :pos) cam-pos)
                       (vec3 320 240 0))))
-    (draw-tilemap *tileset-tex* *tilemap* (vx cam-pos) (vy cam-pos))
-    (draw-sprite :texture *sprite-tex*
+    (draw-tilemap (texture "tiles") *tilemap* (vx cam-pos) (vy cam-pos))
+    (draw-sprite :texture (texture "player")
                  :rgba '(1 1 1 1)
                  :x (vx3 plr-pos)
                  :y (vy3 plr-pos)
