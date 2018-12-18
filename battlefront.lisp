@@ -39,7 +39,8 @@
    vals))
 
 (defparameter *player* (entity :physics (make-physics :pos (vec3 320 240 0))
-                               :player-controller t))
+                               :player-controller t
+                               :sprite (list :texture "player")))
 (defparameter *camera* (entity :physics (make-physics :pos (vec3 0 0 0))
                                :camera (list :target *player*)))
 
@@ -113,17 +114,18 @@
 (defun render ()
   (gl:clear :color-buffer)
   (gl:load-identity)
-  (let* ((cam-pos (get* *camera* :physics :pos))
-         (plr-pos (v+ (v- (get* *player* :physics :pos) cam-pos)
-                      (vec3 320 240 0))))
+  (let* ((cam-pos (get* *camera* :physics :pos)))
     (draw-tilemap (texture "tiles") *tilemap* (vx cam-pos) (vy cam-pos))
-    (draw-sprite :texture (texture "player")
-                 :rgba '(1 1 1 1)
-                 :x (vx3 plr-pos)
-                 :y (vy3 plr-pos)
-                 :width 64 :height 64
-                 :rot (rad2deg (get* *player* :physics :rot))
-                 :center-x 0.5 :center-y 0.5))
+    (dolist (e (query-entities '(:sprite)))
+      (let ((draw-pos (v+ (v- (get* e :physics :pos) cam-pos)
+                          (vec3 320 240 0))))
+        (draw-sprite :texture (texture "player")
+                     :rgba '(1 1 1 1)
+                     :x (vx3 draw-pos)
+                     :y (vy3 draw-pos)
+                     :width 64 :height 64
+                     :rot (rad2deg (get* e :physics :rot))
+                     :center-x 0.5 :center-y 0.5))))
   (gl:flush))
 
 (defun draw-sprite (&key texture
