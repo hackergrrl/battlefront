@@ -1,42 +1,21 @@
 (in-package #:battlefront)
 
-;; GOAL: add components + systems s.t. player can be controlled with keyboard
+;;--------------------------------------------------------------------------------
+;; PLANNING
+;;--------------------------------------------------------------------------------
 
-;; [x] basic ecs.lisp integration
-;; [x] load in skirmish online player sprite
-;; [x] WASD movement controls
-;; [x] use vectors
-;; [x] normalize input direction
-;; [x] mouse-look rotation
-;; [x] camera component + camera entity + target follow
-;; [ ] draw-sprite component + render function + render query pass
+;;; GOAL: ???
+;; [ ] ???
 
 ;;; QUESTIONS
 ;; Q: how to ignore a param when writing a lambda?
 
+;;--------------------------------------------------------------------------------
+;; GLOBALS
+;;--------------------------------------------------------------------------------
+
 (require :sdl2)
 (require :cl-opengl)
-
-(defun plist-props (p)
-  "List of all property names on a plist."
-  (let ((n 0))
-    (remove-if-not
-     (lambda (x) (equal 1 (mod (incf n) 2)))
-     p)))
-
-(defun plist-assign (base new)
-  "Assign keys from plist NEW atop plist BASE."
-  (let ((res (copy-list base)))
-    (dolist (prop (plist-props new))
-      (setf (getf res prop) (getf new prop)))
-    res))
-
-(defun make-physics (&rest vals)
-  (plist-assign
-   (list :pos (vec3 0 0 0)
-         :vel (vec3 0 0 0)
-         :rot 0)
-   vals))
 
 (defparameter *player* (entity :physics (make-physics :pos (vec3 320 240 0))
                                :player-controller t
@@ -45,15 +24,13 @@
                                :camera (list :target *player*)))
 
 (defparameter *textures* (make-hash-table))
-
-(defun texture (name)
-  (gethash name *textures*))
-
 (defparameter *screen-width* 640)
 (defparameter *screen-height* 480)
 (defparameter *tilemap* (make-array (list 20 20)))
-;; fun init:
-;;(dotimes (n 400) (setf (row-major-aref *tilemap* n) (random 10)))
+
+;;--------------------------------------------------------------------------------
+;; SYSTEMS
+;;--------------------------------------------------------------------------------
 
 (defsystem 2d-physics (e (p :physics))
   (let ((gnd-friction 0.93))
@@ -85,6 +62,10 @@
               (tpos (get* target :physics :pos)))
           (nv+ pos (v* (v- tpos pos) 0.3))))))
 
+;;--------------------------------------------------------------------------------
+;; ENGINE LOGIC
+;;--------------------------------------------------------------------------------
+
 (defun main ()
   (engine:init :title "Battlefront"
                :w *screen-width* :h *screen-height*
@@ -104,6 +85,13 @@
   (gl:matrix-mode :modelview)
   (gl:load-identity)
   (gl:clear-color 0.0 0.0 0.0 1.0)
+  ;; empty arena
+  (dotimes (x 20)
+    (dotimes (y 20)
+      (if (and (> x 0) (> y 0) (< x 19) (< y 19))
+          (setf (aref *tilemap* x y) 8)
+          (setf (aref *tilemap* x y) 0))))
+  ;; load textures
   (setf
    (gethash "player" *textures*) (tex-png:make-texture-from-png "player.png")
    (gethash "tiles" *textures*) (tex-png:make-texture-from-png "tileset.png")))
@@ -123,10 +111,14 @@
                      :rgba '(1 1 1 1)
                      :x (vx3 draw-pos)
                      :y (vy3 draw-pos)
-                     :width 64 :height 64
+                     :width 48 :height 48
                      :rot (rad2deg (get* e :physics :rot))
                      :center-x 0.5 :center-y 0.5))))
   (gl:flush))
+
+;;--------------------------------------------------------------------------------
+;; HELPER FUNCTIONS
+;;--------------------------------------------------------------------------------
 
 (defun draw-sprite (&key texture
                       (width 32.0) (height 32.0)
@@ -211,3 +203,27 @@
 
 (defun rad2deg (r)
   (* r (/ 180.0 PI)))
+
+
+(defun plist-props (p)
+  "List of all property names on a plist."
+  (let ((n 0))
+    (remove-if-not
+     (lambda (x) (equal 1 (mod (incf n) 2)))
+     p)))
+
+(defun plist-assign (base new)
+  "Assign keys from plist NEW atop plist BASE."
+  (let ((res (copy-list base)))
+    (dolist (prop (plist-props new))
+      (setf (getf res prop) (getf new prop)))
+    res))
+
+(defun make-physics (&rest vals)
+  (plist-assign (list :pos (vec3 0 0 0)
+                      :vel (vec3 0 0 0)
+                      :rot 0)
+                vals))
+
+(defun texture (name)
+  (gethash name *textures*))
