@@ -11,112 +11,6 @@
 ;; Q: how to ignore a param when writing a lambda?
 
 ;;--------------------------------------------------------------------------------
-;; GLOBALS
-;;--------------------------------------------------------------------------------
-
-(require :sdl2)
-(require :cl-opengl)
-
-(defparameter *player* (entity :physics (make-physics :pos (vec3 320 240 0))
-                               :player-controller t
-                               :sprite (list :texture "player")))
-(defparameter *camera* (entity :physics (make-physics :pos (vec3 0 0 0))
-                               :camera (list :target *player*)))
-
-(defparameter *textures* (make-hash-table))
-(defparameter *screen-width* 640)
-(defparameter *screen-height* 480)
-(defparameter *tilemap* (make-array (list 20 20)))
-
-;;--------------------------------------------------------------------------------
-;; SYSTEMS
-;;--------------------------------------------------------------------------------
-
-(defsystem 2d-physics (e (p :physics))
-  (let ((gnd-friction 0.93))
-    ;; move pos by velocity
-    (nv+ (getf p :pos) (getf p :vel))
-    ;; apply ground friction
-    (nv* (getf p :vel) gnd-friction)))
-
-(defsystem player-controller (e (p :physics) :player-controller)
-  (let* ((speed 0.15)
-         (input (vec3
-                 (* speed (+
-                           (if (engine:key-down :d) 1 0)
-                           (if (engine:key-down :a) -1 0)))
-                 (* speed (+
-                           (if (engine:key-down :w) -1 0)
-                           (if (engine:key-down :s) 1 0)))
-                 0))
-         (force (v* (nvunit-safe input) speed)))
-    (nv+ (getf p :vel) force)
-    (setf (getf p :rot)
-          (screen-xy-to-rot (engine:mouse-pos :x)
-                            (engine:mouse-pos :y)))))
-
-(defsystem follow-camera-target (e (p :physics) (c :camera))
-  (let ((target (getf c :target)))
-    (if (not (null target))
-        (let ((pos (getf p :pos))
-              (tpos (get* target :physics :pos)))
-          (nv+ pos (v* (v- tpos pos) 0.3))))))
-
-;;--------------------------------------------------------------------------------
-;; ENGINE LOGIC
-;;--------------------------------------------------------------------------------
-
-(defun main ()
-  (engine:init :title "Battlefront"
-               :w *screen-width* :h *screen-height*
-               :init 'init
-               :update 'update
-               :render 'render))
-
-(defun init (win gl-context)
-  "Setup OpenGL with the window WIN and the gl context GL-CONTEXT"
-  (sdl2:gl-make-current win gl-context)
-  (gl:enable :texture-2d)
-  (gl:enable :blend)
-  (gl:blend-func :src-alpha :one-minus-src-alpha)
-  (gl:viewport 0 0 640 480)
-  (gl:matrix-mode :projection)
-  (gl:ortho 0 640 480 0 -2 2)
-  (gl:matrix-mode :modelview)
-  (gl:load-identity)
-  (gl:clear-color 0.0 0.0 0.0 1.0)
-  ;; empty arena
-  (dotimes (x 20)
-    (dotimes (y 20)
-      (if (and (> x 0) (> y 0) (< x 19) (< y 19))
-          (setf (aref *tilemap* x y) 8)
-          (setf (aref *tilemap* x y) 0))))
-  ;; load textures
-  (setf
-   (gethash "player" *textures*) (tex-png:make-texture-from-png "player.png")
-   (gethash "tiles" *textures*) (tex-png:make-texture-from-png "tileset.png")))
-
-(defun update ()
-  (tick-systems))
-
-(defun render ()
-  (gl:clear :color-buffer)
-  (gl:load-identity)
-  (let* ((cam-pos (get* *camera* :physics :pos)))
-    (draw-tilemap (texture "tiles") *tilemap* (vx cam-pos) (vy cam-pos))
-    (dolist (e (query-entities '(:sprite)))
-      (let ((draw-pos (v+ (v- (get* e :physics :pos) cam-pos)
-                          (vec3 320 240 0))))
-        (draw-sprite :texture (texture "player")
-                     :rgba '(1 1 1 1)
-                     :x (vx3 draw-pos)
-                     :y (vy3 draw-pos)
-                     :width 48 :height 48
-                     :rot (rad2deg (get* e :physics :rot))
-                     :center-x 0.5 :center-y 0.5))))
-  (gl:flush))
-
-;;--------------------------------------------------------------------------------
 ;; HELPER FUNCTIONS
 ;;--------------------------------------------------------------------------------
 
@@ -227,3 +121,110 @@
 
 (defun texture (name)
   (gethash name *textures*))
+
+;;--------------------------------------------------------------------------------
+;; GLOBALS
+;;--------------------------------------------------------------------------------
+
+(require :sdl2)
+(require :cl-opengl)
+
+(defparameter *player* (entity :physics (make-physics :pos (vec3 320 240 0))
+                               :player-controller t
+                               :sprite (list :texture "player")))
+(defparameter *camera* (entity :physics (make-physics :pos (vec3 0 0 0))
+                               :camera (list :target *player*)))
+
+(defparameter *textures* (make-hash-table))
+(defparameter *screen-width* 640)
+(defparameter *screen-height* 480)
+(defparameter *tilemap* (make-array (list 20 20)))
+
+;;--------------------------------------------------------------------------------
+;; SYSTEMS
+;;--------------------------------------------------------------------------------
+
+(defsystem 2d-physics (e (p :physics))
+  (let ((gnd-friction 0.93))
+    ;; move pos by velocity
+    (nv+ (getf p :pos) (getf p :vel))
+    ;; apply ground friction
+    (nv* (getf p :vel) gnd-friction)))
+
+(defsystem player-controller (e (p :physics) :player-controller)
+  (let* ((speed 0.15)
+         (input (vec3
+                 (* speed (+
+                           (if (engine:key-down :d) 1 0)
+                           (if (engine:key-down :a) -1 0)))
+                 (* speed (+
+                           (if (engine:key-down :w) -1 0)
+                           (if (engine:key-down :s) 1 0)))
+                 0))
+         (force (v* (nvunit-safe input) speed)))
+    (nv+ (getf p :vel) force)
+    (setf (getf p :rot)
+          (screen-xy-to-rot (engine:mouse-pos :x)
+                            (engine:mouse-pos :y)))))
+
+(defsystem follow-camera-target (e (p :physics) (c :camera))
+  (let ((target (getf c :target)))
+    (if (not (null target))
+        (let ((pos (getf p :pos))
+              (tpos (get* target :physics :pos)))
+          (nv+ pos (v* (v- tpos pos) 0.3))))))
+
+;;--------------------------------------------------------------------------------
+;; ENGINE LOGIC
+;;--------------------------------------------------------------------------------
+
+(defun main ()
+  (engine:init :title "Battlefront"
+               :w *screen-width* :h *screen-height*
+               :init 'init
+               :update 'update
+               :render 'render))
+
+(defun init (win gl-context)
+  "Setup OpenGL with the window WIN and the gl context GL-CONTEXT"
+  (sdl2:gl-make-current win gl-context)
+  (gl:enable :texture-2d)
+  (gl:enable :blend)
+  (gl:blend-func :src-alpha :one-minus-src-alpha)
+  (gl:viewport 0 0 640 480)
+  (gl:matrix-mode :projection)
+  (gl:ortho 0 640 480 0 -2 2)
+  (gl:matrix-mode :modelview)
+  (gl:load-identity)
+  (gl:clear-color 0.0 0.0 0.0 1.0)
+  ;; empty arena
+  (dotimes (x 20)
+    (dotimes (y 20)
+      (if (and (> x 0) (> y 0) (< x 19) (< y 19))
+          (setf (aref *tilemap* x y) 8)
+          (setf (aref *tilemap* x y) 0))))
+  ;; load textures
+  (setf
+   (gethash "player" *textures*) (tex-png:make-texture-from-png "player.png")
+   (gethash "tiles" *textures*) (tex-png:make-texture-from-png "tileset.png")))
+
+(defun update ()
+  (tick-systems))
+
+(defun render ()
+  (gl:clear :color-buffer)
+  (gl:load-identity)
+  (let* ((cam-pos (get* *camera* :physics :pos)))
+    (draw-tilemap (texture "tiles") *tilemap* (vx cam-pos) (vy cam-pos))
+    (dolist (e (query-entities '(:sprite)))
+      (let ((draw-pos (v+ (v- (get* e :physics :pos) cam-pos)
+                          (vec3 320 240 0))))
+        (draw-sprite :texture (texture "player")
+                     :rgba '(1 1 1 1)
+                     :x (vx3 draw-pos)
+                     :y (vy3 draw-pos)
+                     :width 48 :height 48
+                     :rot (rad2deg (get* e :physics :rot))
+                     :center-x 0.5 :center-y 0.5))))
+  (gl:flush))
+
