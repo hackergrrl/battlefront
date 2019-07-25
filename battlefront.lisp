@@ -6,6 +6,7 @@
 
 ;;; GOAL: ???
 ;; [ ] ???
+;; [x] Fix wall collisions so you can't go through walls
 
 ;;; QUESTIONS
 ;; Q: how to ignore a param when writing a lambda?
@@ -122,6 +123,12 @@
                       :rot 0)
                 vals))
 
+(defun tile-at (wx wy)
+  "Get the tile at a particular world x/y."
+  (let ((tx (floor (/ wx 32)))
+        (ty (floor (/ wy 32))))
+    (aref-2d *tilemap* tx ty 0)))
+
 (defun texture (name)
   (gethash name *textures*))
 
@@ -146,6 +153,17 @@
 ;;--------------------------------------------------------------------------------
 ;; SYSTEMS
 ;;--------------------------------------------------------------------------------
+
+(defsystem collide-walls (e (p :physics))
+  (let* ((new-pos (v+ (getf p :pos) (getf p :vel))))
+    ;; check x direction
+    (when (equal (tile-at (vx new-pos) (vy (getf p :pos))) 0)
+      (decf (vx (getf p :pos)) (* 1.5 (vx (getf p :vel))))
+      (setf (vx (getf p :vel)) (* -1 (vx (getf p :vel)))))
+    ;; check y direction
+    (when (equal (tile-at (vx (getf p :pos)) (vy new-pos)) 0)
+      (decf (vy (getf p :pos)) (* 1.5 (vy (getf p :vel))))
+      (setf (vy (getf p :vel)) (* -1 (vy (getf p :vel)))))))
 
 (defsystem 2d-physics (e (p :physics))
   (let ((gnd-friction 0.93))
@@ -176,6 +194,7 @@
         (let ((pos (getf p :pos))
               (tpos (get* target :physics :pos)))
           (nv+ pos (v* (v- tpos pos) 0.3))))))
+    
 
 ;;--------------------------------------------------------------------------------
 ;; ENGINE LOGIC
