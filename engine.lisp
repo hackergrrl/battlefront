@@ -9,9 +9,16 @@
 (defparameter *key-state* (make-hash-table))
 (defparameter *mouse-pos* (make-array 2))
 
+(defun string+ (&rest strings)
+  "Concatenate all string arguments."
+  (apply #'concatenate (cons 'string strings)))
+
+(defun key-to-scancode (key)
+  "Converts a keyname string to an SDL scancode."
+  (intern (string+ "SCANCODE-" (string-upcase key)) "KEYWORD"))
+
 (defun key-down (key)
-  (let ((scancode (intern (concatenate
-                           'string "SCANCODE-" (string-upcase key)) "KEYWORD")))
+  (let ((scancode (key-to-scancode key)))
     (gethash (sdl2:scancode-key-to-value scancode) *key-state*)))
 
 (defun mouse-pos (elm)
