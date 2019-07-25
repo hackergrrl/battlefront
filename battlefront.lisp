@@ -9,6 +9,7 @@
 
 ;;; QUESTIONS
 ;; Q: how to ignore a param when writing a lambda?
+;; A: (lambda (x) (declare (ignore x)) 69)
 
 ;;--------------------------------------------------------------------------------
 ;; HELPER FUNCTIONS
@@ -103,7 +104,9 @@
   "List of all property names on a plist."
   (let ((n 0))
     (remove-if-not
-     (lambda (x) (equal 1 (mod (incf n) 2)))
+     (lambda (x)
+       (declare (ignore x))
+       (equal 1 (mod (incf n) 2)))
      p)))
 
 (defun plist-assign (base new)
